@@ -23,6 +23,18 @@
         { name: 'L3-d', color: '#EC4899', cells: [[0, 0, 1], [0, 0, 1], [1, 1, 1]] },
     ];
 
+    const CATEGORIES = [
+        SHAPES.filter(s => s.name === '1x1'),
+        SHAPES.filter(s => s.name.startsWith('1x2')),
+        SHAPES.filter(s => s.name.startsWith('1x3')),
+        SHAPES.filter(s => s.name.startsWith('1x4')),
+        SHAPES.filter(s => s.name.startsWith('1x5')),
+        SHAPES.filter(s => s.name === '2x2'),
+        SHAPES.filter(s => s.name === '3x3'),
+        SHAPES.filter(s => s.name.startsWith('L2')),
+        SHAPES.filter(s => s.name.startsWith('L3')),
+    ];
+
     const BONUS_THRESHOLD = 500;
 
     const boardEl = document.getElementById('board');
@@ -262,7 +274,8 @@
     }
 
     function randomShape() {
-        const s = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+        const category = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+        const s = category[Math.floor(Math.random() * category.length)];
         return { ...s, cells: s.cells.map(row => row.slice()) };
     }
 
@@ -687,6 +700,18 @@
     document.addEventListener('pointercancel', () => {
         if (!dragState) return;
         endDrag(false);
+    });
+
+    document.addEventListener('contextmenu', (e) => {
+        if (!dragState) return;
+        e.preventDefault();
+        endDrag(false);
+    });
+
+    document.addEventListener('pointerdown', (e) => {
+        if (dragState && e.button !== 0) {
+            endDrag(false);
+        }
     });
 
     restartBtn.addEventListener('click', () => init(false));
