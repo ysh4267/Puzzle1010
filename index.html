@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>1010! Puzzle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="header">
+            <h1>1010!</h1>
+            <div class="score-panel">
+                <div class="score-box">
+                    <span class="label">SCORE</span>
+                    <span id="score" class="value">0</span>
+                </div>
+                <div class="score-box">
+                    <span class="label">BEST</span>
+                    <span id="best" class="value">0</span>
+                </div>
+                <div class="score-box bonus-box">
+                    <span class="label">BONUS</span>
+                    <span id="bonus" class="value">0</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="board" class="board"></div>
+
+        <div id="tray" class="tray"></div>
+
+        <div class="button-row">
+            <button id="undo" class="restart-btn undo-btn" disabled>되돌리기</button>
+            <button id="restart" class="restart-btn">새 게임</button>
+        </div>
+
+        <div id="gameover" class="gameover hidden">
+            <div class="gameover-card">
+                <h2>GAME OVER</h2>
+                <p>점수: <span id="final-score">0</span></p>
+                <div class="button-row">
+                    <button id="undo2" class="restart-btn undo-btn" disabled>되돌리기</button>
+                    <button id="restart2" class="restart-btn">다시 시작</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="shop-toggle" class="shop-toggle" aria-label="보너스 상점 열기">
+        <span class="shop-toggle-label">상점</span>
+        <span class="shop-toggle-badge" id="shop-badge">0P</span>
+    </button>
+
+    <div id="shop-backdrop" class="shop-backdrop hidden"></div>
+
+    <aside id="shop-drawer" class="shop-drawer" aria-hidden="true">
+        <div class="shop-header">
+            <div class="shop-title">
+                <h3>보너스 상점</h3>
+                <small>500점마다 1P 적립 · 블럭 1개 = 1P</small>
+            </div>
+            <button id="shop-close" class="shop-close" aria-label="닫기">×</button>
+        </div>
+        <div class="shop-meta">
+            <span class="shop-meta-label">보유 포인트</span>
+            <span class="shop-meta-value"><strong id="shop-bonus">0</strong> P</span>
+        </div>
+        <div class="shop-hint">블럭을 보드 위로 드래그해서 배치하면 1P가 차감됩니다.</div>
+        <div id="shop-items" class="shop-items"></div>
+    </aside>
+
+    <script src="script.js"></script>
+</body>
+</html>

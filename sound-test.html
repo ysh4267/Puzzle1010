@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>사운드 후보 미리듣기</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+            background: #F8FAFC;
+            color: #334155;
+            padding: 32px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 28px; margin-bottom: 8px; }
+        .sub { color: #64748B; margin-bottom: 24px; font-size: 14px; }
+        .controls {
+            background: #fff;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .controls label { font-weight: 700; font-size: 14px; }
+        .controls input[type=range] { flex: 1; }
+        .vol-val { font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; color: #64748B; }
+        .card {
+            background: #fff;
+            border: 2px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: border-color 0.15s, transform 0.05s;
+        }
+        .card:hover { border-color: #3B82F6; }
+        .card:active { transform: scale(0.99); }
+        .card.selected { border-color: #10B981; background: #F0FDF4; }
+        .num {
+            font-weight: 800;
+            font-size: 20px;
+            color: #94A3B8;
+            min-width: 28px;
+        }
+        .info { flex: 1; }
+        .name { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+        .desc { font-size: 13px; color: #64748B; }
+        .play-btn {
+            background: #3B82F6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .play-btn:hover { background: #2563EB; }
+        .pick-btn {
+            background: #10B981;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pick-btn:hover { background: #059669; }
+        .selected-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10B981;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .selected-banner.show { opacity: 1; }
+        .back-link {
+            display: inline-block;
+            margin-top: 8px;
+            color: #3B82F6;
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>놓는 소리 후보 미리듣기</h1>
+    <p class="sub">버튼을 눌러 들어보고, "이걸로" 버튼을 누르면 게임에서 사용할 소리가 교체됩니다.</p>
+
+    <div class="controls">
+        <label>볼륨</label>
+        <input id="vol" type="range" min="0" max="100" value="18">
+        <span class="vol-val" id="vol-val">18%</span>
+    </div>
+
+    <div id="list"></div>
+
+    <a class="back-link" href="index.html">← 게임으로 돌아가기</a>
+
+    <div class="selected-banner" id="banner">선택됨!</div>
+
+    <script>
+        const candidates = [
+            { file: '00_current_pillow.mp3', name: '00. 베개 톡 (현재 사용 중)', desc: '폭신한 천 두들기는 느낌, 잔향 없음' },
+            { file: '01_light_switch.mp3', name: '01. 전등 스위치 탭', desc: '플라스틱 스위치 똑 — 살짝 톡톡한 어택' },
+            { file: '02_cast_iron.mp3', name: '02. 무쇠팬 놓는 소리', desc: '둔탁하고 무거운 단발 thud — dull/muffled' },
+            { file: '03_game_ball.mp3', name: '03. 게임 볼 탭', desc: '건조한 핑퐁공 같은 단타 — 짧고 깔끔' },
+            { file: '04_soft_punch.mp3', name: '04. 부드러운 펀치', desc: '패딩 있는 표적에 친 듯한 무딘 임팩트' },
+            { file: '05_fish_drop.mp3', name: '05. Fish dropped (wood-tagged)', desc: '나무 데크 위 단발 thud — wood 태그 있음' },
+            { file: '06_wood_hard.mp3', name: '06. Wood hard hit', desc: '나무 단발 하드 히트 — 도각에 가장 가까울 후보' },
+            { file: '07_retro_click.mp3', name: '07. 레트로 클릭', desc: '아주 짧은 단발 클릭 — 약간 디지털' },
+        ];
+
+        const listEl = document.getElementById('list');
+        const volEl = document.getElementById('vol');
+        const volValEl = document.getElementById('vol-val');
+        const banner = document.getElementById('banner');
+
+        let volume = 0.18;
+        volEl.addEventListener('input', () => {
+            volume = volEl.value / 100;
+            volValEl.textContent = volEl.value + '%';
+        });
+
+        function play(file) {
+            const a = new Audio('sounds/candidates/' + file);
+            a.volume = volume;
+            a.play().catch(() => {});
+        }
+
+        function showBanner(msg) {
+            banner.textContent = msg;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 1800);
+        }
+
+        candidates.forEach((c, i) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="num">${String(i).padStart(2, '0')}</div>
+                <div class="info">
+                    <div class="name">${c.name}</div>
+                    <div class="desc">${c.desc}</div>
+                </div>
+                <button class="play-btn">▶ 듣기</button>
+                <button class="pick-btn" data-file="${c.file}">이걸로</button>
+            `;
+            card.querySelector('.play-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                play(c.file);
+            });
+            card.querySelector('.pick-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    const res = await fetch('sounds/candidates/' + c.file);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    localStorage.setItem('1010-place-sound', 'candidates/' + c.file);
+                    document.querySelectorAll('.card').forEach(x => x.classList.remove('selected'));
+                    card.classList.add('selected');
+                    showBanner(`"${c.name}" 선택됨 — 게임에서 사용 중`);
+                } catch (err) {
+                    alert('선택 실패: ' + err.message);
+                }
+            });
+            card.addEventListener('click', () => play(c.file));
+            listEl.appendChild(card);
+        });
+
+        const current = localStorage.getItem('1010-place-sound');
+        if (current) {
+            document.querySelectorAll('.card .pick-btn').forEach(btn => {
+                if ('candidates/' + btn.dataset.file === current.replace(/^.*candidates\//, 'candidates/')) {
+                    btn.closest('.card').classList.add('selected');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
