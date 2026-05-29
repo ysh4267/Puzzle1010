@@ -43,7 +43,59 @@ body {
     align-items: center;
     gap: 20px;
     width: 100%;
-    max-width: 600px;
+    max-width: 780px;
+}
+
+.tray-section {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: stretch;
+}
+
+.hold-slot {
+    position: relative;
+    background: var(--tray-bg);
+    border-radius: 10px;
+    padding: 12px;
+    width: 194px;
+    height: 194px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: grab;
+    touch-action: none;
+    border: 2px dashed transparent;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+    transition: background 0.15s ease, border-color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.hold-slot.empty {
+    cursor: default;
+    border-color: #CBD5E1;
+}
+
+.hold-slot.dragging {
+    cursor: grabbing;
+    opacity: 0.4;
+}
+
+.hold-slot.drop-target {
+    background: #FEF3C7;
+    border-color: #F59E0B;
+}
+
+.hold-label {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    pointer-events: none;
 }
 
 .header {
@@ -137,23 +189,22 @@ h1 {
 .tray {
     background: var(--tray-bg);
     border-radius: 10px;
-    padding: 18px 12px;
-    width: 100%;
+    padding: 12px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 170px);
+    grid-template-rows: 170px;
     gap: 10px;
-    min-height: 170px;
-    align-items: center;
-    justify-items: center;
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .piece-slot {
+    width: 170px;
+    height: 170px;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 150px;
-    width: 100%;
     cursor: grab;
     touch-action: none;
 }
@@ -233,23 +284,6 @@ h1 {
     display: flex;
     gap: 10px;
     justify-content: center;
-}
-
-.undo-btn {
-    background: #64748B;
-    box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
-}
-
-.undo-btn:hover:not(:disabled) {
-    background: #475569;
-}
-
-.undo-btn:disabled {
-    background: #CBD5E1;
-    color: #94A3B8;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
 }
 
 .gameover {
@@ -564,16 +598,33 @@ h1 {
 
 @media (max-width: 560px) {
     :root {
-        --cell-size: 36px;
+        --cell-size: 32px;
         --gap: 3px;
-        --piece-cell: 22px;
+        --piece-cell: 18px;
         --piece-gap: 2px;
     }
+    .tray-section {
+        gap: 8px;
+    }
+    .hold-slot {
+        width: 116px;
+        height: 116px;
+        padding: 8px;
+    }
+    .hold-label {
+        top: 4px;
+        left: 8px;
+        font-size: 10px;
+    }
     .piece-slot {
-        min-height: 110px;
+        width: 100px;
+        height: 100px;
     }
     .tray {
-        min-height: 130px;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: 100px;
+        padding: 8px;
+        gap: 6px;
     }
     h1 {
         font-size: 40px;

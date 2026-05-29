@@ -56,13 +56,15 @@
     const shopItemsEl = document.getElementById('shop-items');
     const shopBonusEl = document.getElementById('shop-bonus');
 
-    const undoBtns = [document.getElementById('undo'), document.getElementById('undo2')].filter(Boolean);
-    let undoSnapshot = null;
-    let nextPieces = null;
+    const holdSlotEl = document.getElementById('hold-slot');
+
+    function clonePiece(p) {
+        return p ? { name: p.name, color: p.color, cells: p.cells.map(row => row.slice()) } : null;
+    }
 
     function clonePieces(arr) {
         if (!Array.isArray(arr)) return null;
-        return arr.map(p => p ? { name: p.name, color: p.color, cells: p.cells.map(row => row.slice()) } : null);
+        return arr.map(clonePiece);
     }
 
     const SAVE_KEY = '1010-save';
@@ -73,6 +75,7 @@
     let score = 0;
     let best = Number(localStorage.getItem('1010-best') || 0);
     let bonusPoints = 0;
+    let holdPiece = null;
 
     function saveState() {
         try {
@@ -81,8 +84,7 @@
                 pieces: pieces.map(p => p ? { name: p.name, color: p.color, cells: p.cells } : null),
                 score,
                 bonusPoints,
-                undoSnapshot,
-                nextPieces,
+                holdPiece: holdPiece ? { name: holdPiece.name, color: holdPiece.color, cells: holdPiece.cells } : null,
             };
             localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         } catch (_) {}
@@ -126,16 +128,14 @@
             score = Number(saved.score) || 0;
             bonusPoints = Number(saved.bonusPoints) || 0;
             pieces = clonePieces(saved.pieces) || [];
-            undoSnapshot = saved.undoSnapshot || null;
-            nextPieces = clonePieces(saved.nextPieces);
+            holdPiece = clonePiece(saved.holdPiece) || null;
         } else {
             clearSavedState();
             board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
             score = 0;
             bonusPoints = 0;
             pieces = [];
-            undoSnapshot = null;
-            nextPieces = null;
+            holdPiece = null;
         }
 
         cellEls = [];
@@ -158,7 +158,7 @@
         updateScore();
         bestEl.textContent = best;
         updateBonus();
-        updateUndoButton();
+        renderHold();
 
         if (pieces.length && pieces.some(p => p)) {
             renderTray();
@@ -172,55 +172,6 @@
             finalScoreEl.textContent = score;
             gameoverEl.classList.remove('hidden');
         }
-        saveState();
-    }
-
-    function captureUndoSnapshot() {
-        undoSnapshot = {
-            board: board.map(row => row.slice()),
-            pieces: clonePieces(pieces),
-            score,
-            bonusPoints,
-            nextPieces: clonePieces(nextPieces),
-        };
-        updateUndoButton();
-    }
-
-    function updateUndoButton() {
-        undoBtns.forEach(btn => { btn.disabled = !undoSnapshot; });
-    }
-
-    function undo() {
-        if (!undoSnapshot) return;
-        board = undoSnapshot.board.map(row => row.slice());
-        pieces = clonePieces(undoSnapshot.pieces);
-        score = undoSnapshot.score;
-        bonusPoints = undoSnapshot.bonusPoints;
-        nextPieces = clonePieces(undoSnapshot.nextPieces);
-        undoSnapshot = null;
-
-        cellEls = [];
-        boardEl.innerHTML = '';
-        for (let r = 0; r < BOARD_SIZE; r++) {
-            for (let c = 0; c < BOARD_SIZE; c++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.dataset.row = r;
-                cell.dataset.col = c;
-                if (board[r][c]) {
-                    cell.classList.add('filled');
-                    cell.style.setProperty('--cell-color', board[r][c]);
-                }
-                boardEl.appendChild(cell);
-                cellEls.push(cell);
-            }
-        }
-
-        updateScore();
-        updateBonus();
-        renderTray();
-        gameoverEl.classList.add('hidden');
-        updateUndoButton();
         saveState();
     }
 
@@ -261,14 +212,9 @@
     }
 
     function refillTray() {
-        if (nextPieces && nextPieces.length === 3) {
-            pieces = clonePieces(nextPieces);
-            nextPieces = null;
-        } else {
-            pieces = [];
-            for (let i = 0; i < 3; i++) {
-                pieces.push(randomShape());
-            }
+        pieces = [];
+        for (let i = 0; i < 3; i++) {
+            pieces.push(randomShape());
         }
         renderTray();
     }
@@ -299,6 +245,17 @@
             trayEl.appendChild(slot);
         });
         updateShopItemsState();
+    }
+
+    function renderHold() {
+        const existing = holdSlotEl.querySelector('.piece');
+        if (existing) existing.remove();
+        if (!holdPiece) {
+            holdSlotEl.classList.add('empty');
+            return;
+        }
+        holdSlotEl.classList.remove('empty');
+        holdSlotEl.appendChild(buildPieceEl(holdPiece));
     }
 
     function renderShop() {
@@ -484,6 +441,7 @@
         for (const p of pieces) {
             if (p && canPlaceAnywhere(p)) return false;
         }
+        if (holdPiece && canPlaceAnywhere(holdPiece)) return false;
         if (bonusPoints > 0 && canPlaceAnywhere(SHAPES[0])) return false;
         return true;
     }
@@ -549,16 +507,31 @@
         });
     }
 
+    holdSlotEl.addEventListener('pointerdown', (e) => {
+        if (!holdPiece || dragState) return;
+        e.preventDefault();
+        holdSlotEl.setPointerCapture?.(e.pointerId);
+        startDrag('hold', holdPiece, null, holdSlotEl, e.clientX, e.clientY, e.pointerId);
+    });
+
     function updateDragPos(clientX, clientY) {
         if (!dragState) return;
         const cellSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
         const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--gap'));
         const step = cellSize + gap;
 
-        const { dragEl, rows, cols, piece } = dragState;
+        const { dragEl, rows, cols, piece, source } = dragState;
         const liftY = 80;
         dragEl.style.left = clientX + 'px';
         dragEl.style.top = (clientY - liftY) + 'px';
+
+        const probeY = clientY - liftY;
+        const holdRect = holdSlotEl.getBoundingClientRect();
+        const overHold = source !== 'shop' &&
+            clientX >= holdRect.left && clientX <= holdRect.right &&
+            probeY >= holdRect.top && probeY <= holdRect.bottom;
+        dragState.overHold = overHold;
+        holdSlotEl.classList.toggle('drop-target', overHold);
 
         const boardRect = boardEl.getBoundingClientRect();
         const pieceCenterX = clientX;
@@ -576,9 +549,10 @@
         const col = Math.round(relX / step);
         const row = Math.round(relY / step);
 
-        const inBounds = row >= 0 && row + rows <= BOARD_SIZE && col >= 0 && col + cols <= BOARD_SIZE;
+        const inBounds = !overHold &&
+            row >= 0 && row + rows <= BOARD_SIZE && col >= 0 && col + cols <= BOARD_SIZE;
         const valid = inBounds && canPlace(piece, row, col);
-        const key = inBounds ? `${row},${col},${valid ? 'v' : 'i'}` : 'none';
+        const key = overHold ? 'hold' : (inBounds ? `${row},${col},${valid ? 'v' : 'i'}` : 'none');
 
         if (key === dragState.lastGhostKey) return;
         dragState.lastGhostKey = key;
@@ -629,13 +603,36 @@
     function endDrag(committed) {
         if (!dragState) return;
         const source = dragState.source;
+        const overHold = dragState.overHold;
         dragState.dragEl.remove();
         dragState.slot.classList.remove('dragging');
+        holdSlotEl.classList.remove('drop-target');
         clearGhosts();
+
+        if (committed && overHold && source !== 'shop') {
+            if (source === 'tray') {
+                const prev = holdPiece;
+                holdPiece = clonePiece(dragState.piece);
+                pieces[dragState.idx] = prev;
+                renderHold();
+                renderTray();
+                if (pieces.every(p => !p)) {
+                    refillTray();
+                }
+                saveState();
+                setTimeout(() => {
+                    if (checkGameOver()) {
+                        finalScoreEl.textContent = score;
+                        gameoverEl.classList.remove('hidden');
+                    }
+                }, 50);
+            }
+            dragState = null;
+            return;
+        }
 
         if (committed && dragState.lastValid) {
             const { row, col } = dragState.lastValid;
-            captureUndoSnapshot();
             const prevScore = score;
             const placedCells = placePiece(dragState.piece, row, col);
             score += placedCells;
@@ -645,6 +642,9 @@
             } else if (source === 'shop') {
                 bonusPoints -= 1;
                 updateBonus();
+            } else if (source === 'hold') {
+                holdPiece = null;
+                renderHold();
             }
 
             play(placeSound);
@@ -663,9 +663,6 @@
                 renderTray();
                 if (pieces.every(p => !p)) {
                     refillTray();
-                    if (undoSnapshot) {
-                        undoSnapshot.nextPieces = clonePieces(pieces);
-                    }
                 }
             }
 
@@ -716,7 +713,6 @@
 
     restartBtn.addEventListener('click', () => init(false));
     restartBtn2.addEventListener('click', () => init(false));
-    undoBtns.forEach(btn => btn.addEventListener('click', undo));
 
     shopToggleEl.addEventListener('click', openShop);
     shopCloseEl.addEventListener('click', closeShop);

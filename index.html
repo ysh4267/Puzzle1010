@@ -28,10 +28,14 @@
 
         <div id="board" class="board"></div>
 
-        <div id="tray" class="tray"></div>
+        <div class="tray-section">
+            <div id="hold-slot" class="hold-slot empty">
+                <span class="hold-label">HOLD</span>
+            </div>
+            <div id="tray" class="tray"></div>
+        </div>
 
         <div class="button-row">
-            <button id="undo" class="restart-btn undo-btn" disabled>되돌리기</button>
             <button id="restart" class="restart-btn">새 게임</button>
         </div>
 
@@ -40,7 +44,6 @@
                 <h2>GAME OVER</h2>
                 <p>점수: <span id="final-score">0</span></p>
                 <div class="button-row">
-                    <button id="undo2" class="restart-btn undo-btn" disabled>되돌리기</button>
                     <button id="restart2" class="restart-btn">다시 시작</button>
                 </div>
             </div>
